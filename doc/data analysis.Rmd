@@ -1,0 +1,203 @@
+---
+title: "sentimental analysis"
+author: "Peiqi Jin UNI:pj2324"
+date: "9/16/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+##explore difference of happiness topic among people
+
+##use key words from dictionaries in happyDB to find topics of each sentence
+
+##step1:read the file and construct a dictionary for all topics
+```{r}
+hm_data <- read.csv("../output/processed_moments.csv")
+entertainment<-"https://raw.githubusercontent.com/rit-public/HappyDB/master/happydb/data/topic_dict/entertainment-dict.csv"
+exercise <- "https://raw.githubusercontent.com/rit-public/HappyDB/master/happydb/data/topic_dict/exercise-dict.csv"
+family <- "https://raw.githubusercontent.com/rit-public/HappyDB/master/happydb/data/topic_dict/family-dict.csv"
+food <- "https://raw.githubusercontent.com/rit-public/HappyDB/master/happydb/data/topic_dict/food-dict.csv"
+people <- "https://raw.githubusercontent.com/rit-public/HappyDB/master/happydb/data/topic_dict/people-dict.csv"
+pets <- "https://raw.githubusercontent.com/rit-public/HappyDB/master/happydb/data/topic_dict/pets-dict.csv"
+school <- "https://raw.githubusercontent.com/rit-public/HappyDB/master/happydb/data/topic_dict/school-dict.csv"
+shopping <- "https://raw.githubusercontent.com/rit-public/HappyDB/master/happydb/data/topic_dict/shopping-dict.csv"
+work <- "https://raw.githubusercontent.com/rit-public/HappyDB/master/happydb/data/topic_dict/work-dict.csv"
+
+entertainment <- read.csv(entertainment, header=FALSE)
+exercise <- read.csv(exercise, header=FALSE)
+family <- read.csv(family,header=FALSE)
+food <- read.csv(food, header=FALSE)
+people <- read.csv(people, header=FALSE)
+pets <- read.csv(pets, header=FALSE)
+school <- read.csv(school, header=FALSE)
+shopping <- read.csv(shopping, header=FALSE)
+work <- read.csv(work, header=FALSE)
+
+library(quanteda)
+
+dic <- dictionary(list(entertainment=as.character(entertainment[, 1]), exercise=as.character(exercise[,1]),family=as.character(family[, 1]), food=as.character(food[, 1]), people=as.character(people[, 1]), pets=as.character(pets[,1]), school=as.character(school[, 1]), shopping=as.character(shopping[, 1]), work=as.character(work[, 1])))
+
+```
+
+## step2: use key words from dictionaries to find topics of each sentence
+
+```{r}
+hm_data$words <- lapply(as.character(hm_data$text), tokens)
+
+lookup <- function(x){
+  return(tokens_lookup(x, dic, valuetype=c("fixed"))$text1)
+}
+
+for(i in 1:nrow(hm_data)){
+  hm_data$topics[i] <- list(lookup(hm_data$words[[i]]))
+}
+```
+
+
+
+##step3: import the demographic file and combine hm_data with same id;
+##delete repeated topics in the same sentence
+```{r}
+urlfile<-'https://raw.githubusercontent.com/rit-public/HappyDB/master/happydb/data/demographic.csv'
+demo_data <- read.csv(urlfile)
+
+library(dplyr)
+library(tidyverse)
+library(tidytext)
+library(DT)
+library(scales)
+library(wordcloud2)
+library(gridExtra)
+library(ngram)
+hm_data <- hm_data %>%
+  inner_join(demo_data, by = "wid") %>%
+  select(wid,
+         original_hm,
+         gender, 
+         marital, 
+         parenthood,
+         reflection_period,
+         age, 
+         country, 
+         ground_truth_category, 
+         words,
+         topics) %>%
+  mutate(topics=sapply(hm_data$topics, unique)) %>%
+  filter(gender %in% c("m", "f")) %>%
+  filter(marital %in% c("single", "married")) %>%
+  filter(parenthood %in% c("n", "y")) %>%
+  filter(reflection_period %in% c("24h", "3m")) %>%
+  mutate(reflection_period = fct_recode(reflection_period, 
+                                        months_3 = "3m", hours_24 = "24h"))
+```
+
+
+## step 4: see topic frequencies among all people and visualized with wordcloud
+```{r}
+topic_count <- data.frame(table(unlist(hm_data$topics)))
+
+library(wordcloud)
+
+png("topiccloud.png")
+wordcloud(topic_count$Var1, topic_count$Freq,
+          scale=c(5,0.5),
+          max.words=100,
+          min.freq=1,
+          random.order=FALSE,
+          rot.per=0.3,
+          use.r.layout=T,
+          random.color=FALSE,
+          colors=brewer.pal(9,"Blues"))
+```
+
+
+
+
+##step5(1): compare topic differences between male and female
+```{r}
+library(ggplot2)
+hm_data_female <- hm_data %>%
+  filter(gender %in% c("f"))
+hm_data_male <- hm_data %>%
+  filter(gender %in% c("m"))
+df <- data.frame(table(unlist(hm_data_female$topics)))
+dm <- data.frame(table(unlist(hm_data_male$topics)))
+data1 <- cbind(df, dm[, 2])
+colnames(data1) <- c("topic", "female", "male")
+data1$female <- data1$female/nrow(hm_data_female)
+data1$male <- data1$male/nrow(hm_data_male)
+
+ggplot(data1, aes(female, male))+
+  geom_point(aes(colour=factor(topic)), size=2)+
+  geom_text(aes(label=topic), check_overlap = TRUE, size=2)+
+  geom_abline(slope=1, intercept=0)
+```
+
+##step5(2):compare topic differences between married and single people
+```{r}
+hm_data_married <- hm_data %>%
+  filter(marital %in% c("married"))
+hm_data_single <- hm_data %>%
+  filter(marital %in% c("single"))
+dmar <- data.frame(table(unlist(hm_data_married$topics)))
+dsin <- data.frame(table(unlist(hm_data_single$topics)))
+data2 <- cbind(dmar, dsin[, 2])
+colnames(data2) <- c("topic", "married", "single")
+data2$married <- data2$married/nrow(hm_data_married)
+data2$single <- data2$single/nrow(hm_data_single)
+
+ggplot(data2, aes(married, single))+
+  geom_point(aes(colour=factor(topic)), size=2)+
+  geom_text(aes(label=topic), check_overlap = TRUE, size=2)+
+  geom_abline(slope=1, intercept=0)
+```
+
+
+##step5(3):compare topic differences between parents and non-parents people
+```{r}
+hm_data_par <- hm_data %>%
+  filter(parenthood %in% c("y"))
+hm_data_nopar <- hm_data %>%
+  filter(parenthood %in% c("n"))
+dpar <- data.frame(table(unlist(hm_data_par$topics)))
+dnop <- data.frame(table(unlist(hm_data_nopar$topics)))
+data3 <- cbind(dpar, dnop[, 2])
+colnames(data3) <- c("topic", "parent", "nopar")
+data3$parent <- data3$parent/nrow(hm_data_par)
+data3$nopar <- data3$nopar/nrow(hm_data_nopar)
+
+ggplot(data3, aes(parent, nopar))+
+  geom_point(aes(colour=factor(topic)), size=2)+
+  geom_text(aes(label=topic), check_overlap = TRUE, size=2)+
+  geom_abline(slope=1, intercept=0)
+```
+
+
+
+##step5(4):compare topic differences between 24hours and 3months reflection period
+```{r}
+hm_data_hour24 <- hm_data %>%
+  filter(reflection_period %in% c("hours_24"))
+hm_data_months3 <- hm_data %>%
+  filter(reflection_period %in% c("months_3"))
+dh24 <- data.frame(table(unlist(hm_data_hour24$topics)))
+dm3<- data.frame(table(unlist(hm_data_months3$topics)))
+data4 <- cbind(dh24, dm3[, 2])
+colnames(data4) <- c("topic", "hours_24", "months_3")
+data4$hours_24 <- data4$hours_24/nrow(hm_data_hour24)
+data4$months_3 <- data4$months_3/nrow(hm_data_months3)
+
+ggplot(data4, aes(hours_24, months_3))+
+  geom_point(aes(colour=factor(topic)), size=2)+
+  geom_text(aes(label=topic), check_overlap = TRUE, size=2)+
+  geom_abline(slope=1, intercept=0)
+```
+
+
+
+
+
