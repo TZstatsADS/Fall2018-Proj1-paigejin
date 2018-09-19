@@ -26,3 +26,18 @@ proj/
 ```
 
 Please see each subfolder for a README file.
+
+
+Summary:
+
+![image](figs/title.jpeg)
+
+From my data analysis, people mentioned "people" topic at highest frequency, including friend date etc.The second topic is "family" and the last one is "entertainment".
+
+
+
+
+
+
+
+
