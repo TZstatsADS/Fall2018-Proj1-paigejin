@@ -35,6 +35,27 @@ Summary:
 From my data analysis, people mentioned "people" topic at highest frequency, including friend date etc.The second topic is "family" and the last one is "entertainment".
 
 
+![image](figs/data1.png)
+
+Compared to male, female mentioned "pets", "people" and "family" more frequently. And it seems that "exercise" and "entertainment" can give male more happiness.
+
+![image](figs/data2.png)
+
+Compared to signle, it makes sense that married people mentions "family" more when it comes to happiness. Single people favors "pets", "entertainment" and "food" more. "Shopping" can give similar happiness to these two groups of people.
+
+
+![image](figs/data3.png)
+
+Compared to no-parents, parents have more happiness in "family" and it often relates to children, for example, "son" "daughter". And it is interesting that parents mention "school" more often. My hypothesis is that parents feel happy when chilren success in shool. And it seems non parents enjoy food, food and entertainment more.
+
+
+![image](figs/data4.png)
+
+From this plot,  "food" and "entertainment" can provide immediate happiness during 24 hours. However, after 3 months, when people think of happy moments, they often came out with "family" and "people" moment. I believe this is because the feeling from family and friends last longer. And we probably forgot what the nicest food during last months.
+
+
+
+
 
 
 
